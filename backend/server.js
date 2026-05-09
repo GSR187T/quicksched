@@ -14,33 +14,48 @@ const MAX_CAPACITY = 5;
 app.post("/book", (req, res) => {
   const { patient, time } = req.body;
 
-  if (!slots[time]) slots[time] = [];
-
-  if (slots[time].length >= MAX_CAPACITY) {
-    return res.status(400).json({ error: "Slot full" });
+  if (!patient || !time) {
+    return res.status(400).send("Invalid request");
   }
 
-  const alreadyBooked = Object.values(slots)
-    .flat()
-    .find((a) => a.patient === patient);
-
-  if (alreadyBooked) {
-    return res.status(400).json({ error: "Already booked" });
+  if (!slots[time]) {
+    slots[time] = [];
   }
 
-  slots[time].push({ patient });
-  res.json({ message: "Booked successfully" });
+  if (slots[time].includes(patient)) {
+    return res.status(400).send("Already booked");
+  }
+
+  if (slots[time].length >= 5) {
+    return res.status(400).send("Slot full");
+  }
+
+  slots[time].push(patient);
+
+  return res.status(200).send("Booked");
 });
 
 // CANCEL
 app.post("/cancel", (req, res) => {
   const { patient, time } = req.body;
 
-  if (!slots[time]) return res.status(400).json({ error: "No slot found" });
+  if (!patient || !time) {
+    return res.status(400).send("Invalid request");
+  }
 
-  slots[time] = slots[time].filter((a) => a.patient !== patient);
+  if (!slots[time]) {
+    return res.status(400).send("No slot found");
+  }
 
-  res.json({ message: "Cancelled" });
+  const index = slots[time].indexOf(patient);
+
+  if (index === -1) {
+    return res.status(400).send("Not found");
+  }
+
+  slots[time].splice(index, 1);
+
+  return res.status(200).send("Cancelled");
 });
 
 // CREATE SLOT
@@ -57,4 +72,10 @@ app.get("/slots", (req, res) => {
   res.json(slots);
 });
 
-app.listen(5000, () => console.log("Backend running on port 5000"));
+if (require.main === module) {
+  app.listen(5000, () => {
+    console.log("Backend running on port 5000");
+  });
+}
+
+module.exports = app;
